@@ -6,7 +6,12 @@ const app = express()
 const port = process.env.PORT || 5000
 
 //middleware
-app.use(cors())
+app.use(
+  cors({
+      origin: ['http://localhost:5173', 'https://coffee-store-86d34.web.app'],
+      credentials: true,
+  }),
+)
 app.use(express.json())
 
 
@@ -31,9 +36,10 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();     // ভারসেল ডিপ্লয় সমস্যা 
 
-    const coffeeCollection = client.db('coffeeDB').collection('coffee')
+    const coffeeCollection = client.db('coffeeDB').collection('coffee');
+    const userCollection = client.db('coffeeDB').collection('user');
 
     app.get('/coffee', async(req, res) => {
         const cursor = coffeeCollection.find() 
@@ -82,6 +88,42 @@ async function run() {
         const result = await coffeeCollection.deleteOne(query)
         res.send(result) 
     })
+
+
+    //user related apis
+
+    app.get('/user', async(req, res) => {
+      const cursor = userCollection.find() 
+      const users = await cursor.toArray() 
+      res.send(users) 
+  })
+
+    app.post('/user', async(req, res) => {
+      const user = req.body 
+      console.log(user)
+      const result = await userCollection.insertOne(user)
+      res.send(result) 
+    })
+
+
+    app.patch('/user', async(req, res) => {
+      const user = req.body 
+      const filter = { email: user.email }
+      const updateDoc = {
+        $set: {
+          lastLoggedAt: user.lastLoggedAt
+        }
+      }
+      const result = await userCollection.updateOne(filter, updateDoc)
+      res.send(result) 
+    })
+
+    app.delete('/user/:id', async(req, res) => {
+      const id = req.params.id 
+      const query = { _id: new ObjectId(id)} 
+      const result = await userCollection.deleteOne(query)
+      res.send(result) 
+  })
 
 
     // Send a ping to confirm a successful connection
